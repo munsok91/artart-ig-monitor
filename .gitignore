@@ -3,3 +3,7 @@ outputs/
 references/
 __pycache__/
 *.pyc
+
+# 캐러셀 렌더링 중간 산출물 (재생성 가능, gen_slides.py 는 추적)
+build/*.html
+build/fonts/
