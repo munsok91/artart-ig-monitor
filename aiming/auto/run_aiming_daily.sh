@@ -4,11 +4,13 @@
 # 2) headless claude 가 소재 선정 → 제작 → 렌더 → 검수 → 인스타 발행
 set -euo pipefail
 
-export PATH="/Users/munsok/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-export HOME="/Users/munsok"
+# launchd 는 최소 환경만 준다 — HOME 이 비어 있을 때만 계정에서 유추 (계정명 하드코딩 금지)
+: "${HOME:=$(eval echo ~$(id -un))}"
+export HOME
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-KIT="/Users/munsok/code/aiming-cardnews-kit"
-ARTART="/Users/munsok/code/artart-cardnews-automation"
+KIT="$HOME/code/aiming-cardnews-kit"
+ARTART="$HOME/code/artart-cardnews-automation"
 cd "$KIT"
 
 # APIFY_TOKEN 등은 artart 리포 .env 공용
