@@ -21,23 +21,24 @@ if [ -z "$(ls -A "$STAGE" 2>/dev/null)" ]; then
   echo "[drive] 올릴 파일이 없어요 ($SRC)"; rm -rf "$STAGE"; exit 0
 fi
 
-# --- 1) 드라이브 데스크톱 앱 ---
-GD=$(ls -d "$HOME/Library/CloudStorage/GoogleDrive-"* 2>/dev/null | head -1)
-if [ -n "$GD" ] && [ -d "$GD/내 드라이브" ]; then
-  TARGET="$GD/내 드라이브/에이밍/$DEST_NAME"
-  mkdir -p "$TARGET" && cp "$STAGE"/* "$TARGET/" && \
-    echo "[drive] ✅ 드라이브 앱으로 업로드: 에이밍/$DEST_NAME"
-  rm -rf "$STAGE"; exit 0
-fi
-
-# --- 2) rclone ---
+# --- 1) rclone (팀 검수함 '에이밍' 폴더의 정식 소유자 — 최우선) ---
+# 드라이브 앱보다 먼저 쓴다. 앱으로 mkdir 하면 같은 이름의 중복 폴더가 생기기 때문.
 if command -v rclone >/dev/null 2>&1 && rclone listremotes 2>/dev/null | grep -q "^${RCLONE_REMOTE}:"; then
   if rclone copy "$STAGE" "${RCLONE_REMOTE}:에이밍/$DEST_NAME" --drive-chunk-size 32M -q; then
     echo "[drive] ✅ rclone 으로 업로드: 에이밍/$DEST_NAME"
     rm -rf "$STAGE"; exit 0
   else
-    echo "[drive] ⚠️ rclone 업로드 실패 — 제작본은 바탕화면에 있어요"
+    echo "[drive] ⚠️ rclone 업로드 실패 — 드라이브 앱 경로로 재시도"
   fi
+fi
+
+# --- 2) 드라이브 데스크톱 앱 (rclone 없을 때만) ---
+GD=$(ls -d "$HOME/Library/CloudStorage/GoogleDrive-"* 2>/dev/null | head -1)
+if [ -n "$GD" ] && [ -d "$GD/내 드라이브/에이밍" ]; then   # 폴더가 이미 있을 때만 (중복 생성 방지)
+  TARGET="$GD/내 드라이브/에이밍/$DEST_NAME"
+  mkdir -p "$TARGET" && cp "$STAGE"/* "$TARGET/" && \
+    echo "[drive] ✅ 드라이브 앱으로 업로드: 에이밍/$DEST_NAME"
+  rm -rf "$STAGE"; exit 0
 fi
 
 echo "[drive] ℹ️ 드라이브 연결 없음 — 업로드 건너뜀 (제작본은 바탕화면에 있음)"
