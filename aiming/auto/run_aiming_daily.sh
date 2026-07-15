@@ -1,5 +1,21 @@
 #!/bin/bash
 # 에이밍 데일리 카드뉴스 — 무인 제작·드라이브 업로드 러너 (launchd 진입점)
+
+# 실행 도중 git pull이 이 파일 자체를 바꿔도 Bash가 서로 다른 버전을 섞어
+# 읽지 않도록, 시작 시점의 복사본으로 끝까지 실행한다.
+if [ "${AIMING_RUNNER_SNAPSHOT:-0}" != "1" ]; then
+  SNAPSHOT_BASE="${TMPDIR:-/tmp}"
+  SNAPSHOT_DIR="$(mktemp -d "$SNAPSHOT_BASE/aiming-runner.XXXXXX")" || exit 70
+  SNAPSHOT_FILE="$SNAPSHOT_DIR/run_aiming_daily.sh"
+  if ! cp "$0" "$SNAPSHOT_FILE"; then
+    rmdir "$SNAPSHOT_DIR" 2>/dev/null || true
+    exit 70
+  fi
+  export AIMING_RUNNER_SNAPSHOT=1
+  export AIMING_RUNNER_SNAPSHOT_DIR="$SNAPSHOT_DIR"
+  exec /bin/bash "$SNAPSHOT_FILE" "$@"
+fi
+
 set -Eeuo pipefail
 : "${HOME:=$(eval echo ~$(id -un))}"
 export HOME
@@ -21,10 +37,15 @@ log() {
 }
 
 cleanup() {
-  [ "$LOCKED" -eq 1 ] || return 0
-  rm -f "$LOCK_DIR/pid" "$LOCK_DIR"/episodes.* "$LOCK_DIR"/drive.* \
-    "$LOCK_DIR/slides" 2>/dev/null || true
-  rmdir "$LOCK_DIR" 2>/dev/null || true
+  if [ "$LOCKED" -eq 1 ]; then
+    rm -f "$LOCK_DIR/pid" "$LOCK_DIR"/episodes.* "$LOCK_DIR"/drive.* \
+      "$LOCK_DIR/slides" 2>/dev/null || true
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+  fi
+  if [ -n "${AIMING_RUNNER_SNAPSHOT_DIR:-}" ]; then
+    rm -f "$AIMING_RUNNER_SNAPSHOT_DIR/run_aiming_daily.sh" 2>/dev/null || true
+    rmdir "$AIMING_RUNNER_SNAPSHOT_DIR" 2>/dev/null || true
+  fi
 }
 finish() {
   local rc="$?" duration
