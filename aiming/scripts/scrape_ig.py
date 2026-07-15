@@ -24,7 +24,10 @@ ENV_PATH = REPO_ROOT / ".env"
 OUT_PATH = REPO_ROOT / "outputs" / "econ" / "ig_posts.json"
 
 ACCOUNTS = ["ekke.now", "soonsal.brief", "moneygraphyworld"]
-RESULTS_LIMIT = 12
+# 7일 누적 중복차단을 켠 뒤로는 후보 풀이 얕으면 며칠 만에 바닥난다.
+# (계정당 하루 최대 2건 소진 × 7일 = 14건이 이론상 최대 소모량)
+RESULTS_LIMIT = 30
+KEEP_PER_ACCOUNT = 14
 ACTOR = "apify~instagram-post-scraper"
 MAX_RETRIES = 3       # DNS/타임아웃 등 일시 실패 시 재시도 횟수
 RETRY_WAIT = 20       # 재시도 간 대기(초)
@@ -109,7 +112,7 @@ def main() -> None:
 
     for u in by_account:
         by_account[u].sort(key=lambda x: x["_score"], reverse=True)
-        by_account[u] = by_account[u][:6]  # 계정당 상위 6개만 후보로
+        by_account[u] = by_account[u][:KEEP_PER_ACCOUNT]
 
     total = sum(len(v) for v in by_account.values())
     if total == 0:
