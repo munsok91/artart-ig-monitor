@@ -5,7 +5,7 @@ artart-cardnews-automation/src/render/cover_filter.py와 동일 계열
 커버는 strength 27(아트아트 확정값), 본문은 16(텍스트 가독 우선).
 
 사용:
-    python3 scripts/artart_grain.py episodes/epNN_주제/assets/
+    .venv/bin/python scripts/artart_grain.py episodes/epNN_주제/assets/
     → 폴더 안 모든 jpg에 적용, 원본은 *_원본.jpg로 백업.
       파일명이 cover*로 시작하면 27, 아니면 16.
 """

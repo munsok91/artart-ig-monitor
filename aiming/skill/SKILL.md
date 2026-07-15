@@ -14,12 +14,13 @@ description: 에이밍(@aim___ing) 경제 카드뉴스 자동 제작. 소재(뉴
 1. **소재 확정 + 팩트체크** — 시의성 뉴스면 WebSearch로 최신 기사 2개 이상 교차 확인. 숫자는 출처 없으면 뺀다.
 2. **사진 수집** — 감도가 후킹이다. 인물/손 클로즈업·아이코닉 컷 우선, 전광판·건물 전경 같은 밋밋한 컷 금지. 고화질(가로 1200px+) 뉴스 보도사진/게티 계열, 네이버 이미지 검색 sort=date 활용. 회차 폴더 `assets/`에 다운로드 (외부 URL 직접 참조 금지). 커버용 1장 + 본문 장당 1장.
 3. **원고 작성** — 어체는 "~습니다/~요"만. 커버 2줄 후킹 공식: 1줄째(흰) 타겟 속마음/상황 + 2줄째(민트) 반전 팩트 (예: "월급 모아선 늦다며 / 빚 38조로 주식 삽니다"). 팩트 나열형 커버 금지. 본문 장당 [이모지 소제목 + 정확히 3줄]. AI 말투(=, →, 대시) 금지. 상세는 docs/CONTENT_PLAYBOOK.md.
-4. **아트아트 그레인 처리 (필수)** — `python3 scripts/artart_grain.py episodes/epNN_주제/assets/` 로 배경사진 전체에 아트아트 필름 룩(채도↓ 대비↑ 블랙리프트 + 그레인 + 비네트) 적용. 커버 27, 본문 16 자동. 원본은 `*_원본.jpg`로 백업됨.
+4. **아트아트 그레인 처리 (필수)** — `.venv/bin/python scripts/artart_grain.py episodes/epNN_주제/assets/` 로 배경사진 전체에 아트아트 필름 룩(채도↓ 대비↑ 블랙리프트 + 그레인 + 비네트) 적용. 커버 27, 본문 16 자동. 원본은 `*_원본.jpg`로 백업됨.
 5. **HTML 작성** — `episodes/epNN_주제/epNN.html`. 패턴은 `templates/base.html` 그대로 (커버 A + 본문 B ×4~5 + CTA C). CSS는 `../../assets/design-system.css` 상대경로.
-6. **렌더** — `~/code/wellha-wellness-kit/.venv/bin/python scripts/render.py episodes/epNN_주제/epNN.html`
-7. **검수** — out/ PNG를 Read로 열어 눈으로 확인: 글자 넘침, 사진 위 얼굴과 제목 겹침, 3줄 초과 여부.
-8. **캡션** — `caption.md`: 요약 2~3문장 + 이모지 소제목 단락 + AIM 앱 언급 + `EDITOR | xx` 한 줄 + 해시태그 5~10개. **소재를 퍼온 IG 매거진 계정(@ekke.now·@soonsal.brief·@moneygraphyworld 등)은 캡션·슬라이드 어디에도 @태그/멘션 금지** (문석 지시 2026-07-12) — 출처가 필요하면 기사 매체명까지만.
-9. **배달** — `~/Desktop/에이밍_epNN_주제/` 폴더에 PNG + caption.md 복사하고 폴더 open.
+6. **중복·커버 검수 (필수, 렌더 전)** — `.venv/bin/python scripts/check_images.py episodes/epNN_주제`. 같은 사진 재사용·같은 장면 근접 프레임·지난 회차 사진 재탕·커버 카피 3줄 터짐을 검사한다. FAIL이면 사진 교체/카피 축약 후 통과할 때까지 렌더 금지.
+7. **렌더** — `.venv/bin/python scripts/render.py episodes/epNN_주제/epNN.html`
+8. **검수** — out/ PNG를 Read로 열어 눈으로 확인: 글자 넘침, 사진 위 얼굴과 제목 겹침, 3줄 초과 여부.
+9. **캡션** — `caption.md`: 요약 2~3문장 + 이모지 소제목 단락 + AIM 앱 언급 + `EDITOR | xx` 한 줄 + 해시태그 5~10개. **소재를 퍼온 IG 매거진 계정(@ekke.now·@soonsal.brief·@moneygraphyworld 등)은 캡션·슬라이드 어디에도 @태그/멘션 금지** (문석 지시 2026-07-12) — 출처가 필요하면 기사 매체명까지만.
+10. **배달** — `~/Desktop/에이밍_epNN_주제/` 폴더에 PNG + caption.md 복사하고 폴더 open.
 
 ## 주의
 
