@@ -224,6 +224,51 @@ grep -Eq '^SLACK_(AIMING|ECON)_WEBHOOK_URL=.' "$ARTART/.env" 2>/dev/null \
   || { NEED=1; echo "⚠️ Slack 알림 연결이 없습니다"; }
 
 if [ "$NEED" = "0" ]; then
+  if python3 - "$ARTART/.env" <<'PY'
+import json
+import sys
+import urllib.request
+
+values = {}
+with open(sys.argv[1], encoding="utf-8") as env_file:
+    for raw_line in env_file:
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key.startswith("export "):
+            key = key[7:].strip()
+        values[key] = value.strip().strip('"').strip("'")
+
+webhook = values.get("SLACK_AIMING_WEBHOOK_URL") or values.get("SLACK_ECON_WEBHOOK_URL")
+if not webhook:
+    raise SystemExit(1)
+text = (
+    "✅ *에이밍 집맥 하루 3개 예약 적용 완료*\n"
+    "▶ 매일 07:20 제작\n"
+    "▶ 10:30 · 14:00 · 18:00 부족분 재시도\n"
+    "▶ Drive 파일 + 캡션 + Slack 확인 표시까지 있어야 완료로 집계"
+)
+request = urllib.request.Request(
+    webhook,
+    data=json.dumps({"text": text}).encode(),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+with urllib.request.urlopen(request, timeout=30) as response:
+    if response.read().decode().strip() != "ok":
+        raise SystemExit(1)
+PY
+  then
+    echo "✓ 팀 Slack에 집맥 적용 완료 알림"
+  else
+    NEED=1
+    echo "⚠️ Slack 실제 알림 시험에 실패했습니다"
+  fi
+fi
+
+if [ "$NEED" = "0" ]; then
   echo "✅ 설치 끝! 매일 카드뉴스가 3개가 될 때까지 만들고 팀에 알립니다."
 else
   echo "위 ⚠️ 를 해결한 뒤 이 스크립트를 한 번 더 실행하면 확인됩니다."
