@@ -106,7 +106,7 @@ refresh_drive_count() {
   local dirs_file="$LOCK_DIR/drive.dirs"
   local files_file="$LOCK_DIR/drive.files"
   local success_file="$LOCK_DIR/drive.success"
-  local folder suffix episode_key remote_slides remote_caption remote_notified
+  local folder suffix episode_key remote_slides remote_caption remote_delivered
 
   : > "$success_file"
   if ! timed 180 rclone lsf "${RCLONE_REMOTE}:" \
@@ -130,15 +130,15 @@ refresh_drive_count() {
     fi
     remote_slides="$(awk -F '\t' '$1 + 0 > 0 && $2 ~ /^slide_[0-9]+[.]png$/ { n++ } END { print n + 0 }' "$files_file")"
     remote_caption="$(awk -F '\t' '$1 + 0 > 0 && $2 == "캡션.md" { n++ } END { print n + 0 }' "$files_file")"
-    remote_notified="$(awk -F '\t' '$1 + 0 > 0 && $2 == ".slack_notified" { n++ } END { print n + 0 }' "$files_file")"
-    if [ "$remote_slides" -ge 6 ] && [ "$remote_caption" -ge 1 ] && [ "$remote_notified" -ge 1 ]; then
+    remote_delivered="$(awk -F '\t' '$1 + 0 > 0 && ($2 == ".delivered" || $2 == ".slack_notified") { n++ } END { print n + 0 }' "$files_file")"
+    if [ "$remote_slides" -ge 6 ] && [ "$remote_caption" -ge 1 ] && [ "$remote_delivered" -ge 1 ]; then
       if grep -Fqx "$episode_key" "$success_file"; then
         log "[warn] 오늘 같은 회차 폴더가 중복돼 1개로 계산: $episode_key"
       else
         printf '%s\n' "$episode_key" >> "$success_file"
       fi
     else
-      log "[warn] 오늘 폴더가 불완전해 완료 수에서 제외: $folder (PNG=${remote_slides}, caption=${remote_caption}, Slack=${remote_notified})"
+      log "[warn] 오늘 폴더가 불완전해 완료 수에서 제외: $folder (PNG=${remote_slides}, caption=${remote_caption}, delivered=${remote_delivered})"
     fi
   done < "$dirs_file"
   DRIVE_TODAY_COUNT="$(awk 'END { print NR + 0 }' "$success_file")"
@@ -194,8 +194,6 @@ if [ "$DRIVE_TODAY_COUNT" -ge "$DAILY_TARGET" ]; then
   exit 0
 fi
 command -v claude >/dev/null 2>&1 || fail 20 "claude 명령 없음"
-[ -n "${SLACK_AIMING_WEBHOOK_URL:-${SLACK_ECON_WEBHOOK_URL:-}}" ] \
-  || fail 20 "Slack 알림 연결 없음"
 STAGE="update_code"
 export GIT_TERMINAL_PROMPT=0
 timed 180 git -C "$KIT" pull --rebase --autostash -q >> "$LOG_FILE" 2>&1 \
@@ -259,7 +257,7 @@ while [ "$DRIVE_TODAY_COUNT" -lt "$DAILY_TARGET" ]; do
   COUNT_BEFORE_UPLOAD="$DRIVE_TODAY_COUNT"
   DEST_NAME="${TODAY_PREFIX}${EPISODE}"
   timed 600 bash "$KIT/scripts/upload_drive.sh" "$EPISODE_DIR" "$DEST_NAME" \
-    >> "$LOG_FILE" 2>&1 || fail 40 "팀 드라이브 업로드 또는 Slack 알림 실패"
+    >> "$LOG_FILE" 2>&1 || fail 40 "팀 Drive 업로드 실패"
 
   STAGE="drive_verify_${SLOT}_of_${DAILY_TARGET}"
   refresh_drive_count

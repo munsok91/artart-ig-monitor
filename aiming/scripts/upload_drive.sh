@@ -34,11 +34,6 @@ if ! rclone listremotes 2>/dev/null | grep -Fqx "${RCLONE_REMOTE}:"; then
   echo "[drive] ❌ rclone 연결 '${RCLONE_REMOTE}'을 찾지 못했습니다" >&2
   exit 3
 fi
-if [ -z "$SLACK_WEBHOOK" ]; then
-  echo "[slack] ❌ 알림 연결이 없어 팀 전달 완료로 처리할 수 없습니다" >&2
-  exit 3
-fi
-
 notify_slack() {
   local folder_link="$1"
   local display_name="${TARGET_NAME:-$DEST_NAME}"
@@ -122,15 +117,19 @@ fi
 echo "[drive] ✅ main.artart 팀 검수함 업로드: $TARGET_NAME"
 echo "[drive] 🔗 $LINK"
 
-if ! notify_slack "$LINK"; then
-  echo "[slack] ❌ 팀 알림 실패 (Drive 업로드는 완료)" >&2
-  exit 5
-fi
-printf '%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" > "$STAGE/.slack_notified"
-if ! rclone copyto "$STAGE/.slack_notified" \
-    "${RCLONE_REMOTE}:$TARGET_NAME/.slack_notified" \
+printf '%s\n' "$(date '+%Y-%m-%d %H:%M:%S %Z')" > "$STAGE/.delivered"
+if ! rclone copyto "$STAGE/.delivered" \
+    "${RCLONE_REMOTE}:$TARGET_NAME/.delivered" \
     --drive-root-folder-id "$TEAM_ROOT_ID" -q; then
-  echo "[slack] ❌ 알림 성공 표시 저장 실패" >&2
-  exit 5
+  echo "[drive] ❌ Drive 전달 완료 표시 저장 실패" >&2
+  exit 4
 fi
-echo "[slack] ✅ #02_경제채널_운영에 검수 링크 알림 완료"
+echo "[drive] ✅ Drive 전달 완료 표시 확인"
+
+if [ -z "$SLACK_WEBHOOK" ]; then
+  echo "[slack] ℹ️ 알림 연결 없음 — Drive 전달만 완료"
+elif notify_slack "$LINK"; then
+  echo "[slack] ✅ #02_경제채널_운영에 검수 링크 알림 완료"
+else
+  echo "[slack] ⚠️ 팀 알림 실패 — Drive 전달은 정상 완료" >&2
+fi

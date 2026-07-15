@@ -5,7 +5,7 @@
 #  사용법 (집맥 터미널 / OpenClaw):
 #    curl -fsSL https://raw.githubusercontent.com/munsok91/artart-ig-monitor/main/aiming/install_aiming.sh | APIFY_TOKEN=xxxx bash
 #
-#  하는 일: 최신 킷 설치 → 폰트 → 렌더환경 → 하루 3개 quota-aware launchd 등록
+#  하는 일: 최신 킷 설치 → 폰트 → 렌더환경 → 하루 3개 Drive 전달 launchd 등록
 #  비밀키는 이 저장소에 없음. APIFY_TOKEN 은 환경변수로 받는다.
 ###############################################################################
 set -Eeuo pipefail
@@ -19,7 +19,7 @@ NEED=0
 
 echo ""
 echo "================================================================"
-echo "  에이밍 데일리 카드뉴스 설치 (매일 3개 자동 제작·팀 전달)"
+echo "  에이밍 데일리 카드뉴스 설치 (매일 3개 자동 제작·Drive 전달)"
 echo "================================================================"
 
 # 제작 도중 설치기를 다시 실행하면 launchd unload가 진행 중인 작업을 끊을 수 있다.
@@ -219,11 +219,15 @@ command -v rclone >/dev/null 2>&1 \
        --dirs-only --max-depth 1 >/dev/null 2>&1 \
   && echo "✓ 아트아트 투데이 드라이브 연결 확인" \
   || { NEED=1; echo "⚠️ 아트아트 투데이 에이밍 폴더에 접근할 수 없습니다"; }
-grep -Eq '^SLACK_(AIMING|ECON)_WEBHOOK_URL=.' "$ARTART/.env" 2>/dev/null \
-  && echo "✓ Slack 완료·실패 알림 연결 확인" \
-  || { NEED=1; echo "⚠️ Slack 알림 연결이 없습니다"; }
+if grep -Eq '^SLACK_(AIMING|ECON)_WEBHOOK_URL=.' "$ARTART/.env" 2>/dev/null; then
+  SLACK_CONNECTED=1
+  echo "✓ Slack 알림 연결 확인"
+else
+  SLACK_CONNECTED=0
+  echo "ℹ️ Slack 알림 연결 없음 — Drive 전달은 그대로 실행됩니다"
+fi
 
-if [ "$NEED" = "0" ]; then
+if [ "$NEED" = "0" ] && [ "$SLACK_CONNECTED" = "1" ]; then
   if python3 - "$ARTART/.env" <<'PY'
 import json
 import sys
@@ -263,13 +267,12 @@ PY
   then
     echo "✓ 팀 Slack에 집맥 적용 완료 알림"
   else
-    NEED=1
-    echo "⚠️ Slack 실제 알림 시험에 실패했습니다"
+    echo "⚠️ Slack 실제 알림 시험 실패 — Drive 예약은 정상 적용됩니다"
   fi
 fi
 
 if [ "$NEED" = "0" ]; then
-  echo "✅ 설치 끝! 매일 카드뉴스가 3개가 될 때까지 만들고 팀에 알립니다."
+  echo "✅ 설치 끝! 매일 카드뉴스가 3개가 될 때까지 만들어 Drive에 전달합니다."
 else
   echo "위 ⚠️ 를 해결한 뒤 이 스크립트를 한 번 더 실행하면 확인됩니다."
 fi
