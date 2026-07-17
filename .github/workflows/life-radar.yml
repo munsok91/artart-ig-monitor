@@ -1,0 +1,63 @@
+name: ARTART LIFE adaptive topic radar
+
+on:
+  schedule:
+    # 09:10 KST every day (Korea does not observe daylight saving time).
+    - cron: "10 0 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Slack 발송 없이 분석만"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artart-life-radar
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+      SLACK_LIFE_WEBHOOK_URL: ${{ secrets.SLACK_LIFE_WEBHOOK_URL }}
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore learning and dedup history
+        uses: actions/cache@v4
+        with:
+          path: |
+            references
+            outputs/monitor
+          key: life-radar-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            life-radar-${{ runner.os }}-
+
+      - name: Regression tests
+        run: python3 -m unittest tests.test_life_radar
+
+      - name: Learn and find LIFE topics
+        shell: bash
+        run: |
+          if [[ "${{ inputs.dry_run || false }}" == "true" ]]; then
+            python3 -m src.monitor.life_radar --no-send
+          else
+            python3 -m src.monitor.life_radar
+          fi
+
+      - name: Keep the daily audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: life-radar-${{ github.run_id }}
+          path: outputs/monitor/*life_radar*.json
+          if-no-files-found: ignore
+          retention-days: 14
